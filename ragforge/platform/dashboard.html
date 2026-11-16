@@ -64,7 +64,7 @@
 
     <section id="createTenantSection" class="hidden">
       <h2>2. Create a workspace</h2>
-      <p class="hint">Demo mode works without model downloads or provider credentials. For real models, enter model names here and configure provider API keys as secrets in Render, never in this page.</p>
+      <p class="hint">Demo mode works without model downloads or provider credentials. For real models, enter model names here and configure provider API keys in the server environment, never in this page.</p>
       <label for="tenantName">Workspace name</label>
       <input id="tenantName" maxlength="100" value="My documents" placeholder="e.g. Support handbook">
       <div class="row">
@@ -102,7 +102,7 @@
 
       <section>
         <h2>Workspace settings</h2>
-        <p class="hint">Provider credentials are never entered here. Set them in Render's environment variables before selecting a provider model.</p>
+        <p class="hint">Provider credentials are never entered here. Set them in the environment where the server runs before selecting a provider model.</p>
         <div class="row">
           <div><label for="embedder">Embedder</label><input id="embedder" placeholder="hash:512, st:model, openai:model"></div>
           <div><label for="llm">Answer model</label><input id="llm" placeholder="extractive, ollama:model, openai:model"></div>

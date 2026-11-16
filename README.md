@@ -5,54 +5,86 @@ A tested Python project with two layers:
 1. **Library** (`ragforge/`): ingestion, embeddings, indexes, 14 selectable RAG strategies behind one interface, and an eval harness.
 2. **Service** (`ragforge/platform/`): a multi-tenant FastAPI API on top of the library, with per-tenant model switching (local or API).
 
-The full explanation of every concept, file, workflow and technology is in the separate guide document that came with this project.
+The project can be downloaded from Git and run locally. It includes a command-line RAG workflow and an optional local web service/dashboard.
 
-## Setup
+## Download and install
+
+Requires Python 3.10 or newer and Git. Clone the repository:
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[local,server,dev]"     # local = sentence-transformers, server = FastAPI, dev = pytest
-pytest                                   # 40 tests, all offline
+git clone https://github.com/Krishna-2I/RAAG.git
+cd RAAG
+python -m venv .venv
 ```
 
-## Library quick start
+On Windows PowerShell, install the lightweight CLI, service, and test dependencies:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[server,dev]"
+```
+
+On macOS/Linux, activate the environment and install the same extras:
 
 ```bash
+source .venv/bin/activate
+python -m pip install -e ".[server,dev]"
+```
+
+Run the automated tests with `.\.venv\Scripts\python.exe -m pytest` on Windows or `python -m pytest` on macOS/Linux. They run offline.
+
+## Try the offline CLI demo
+
+This uses bundled sample docs, the built-in test embedder, and an extractive answerer. It needs no model download or API key.
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\ragforge.exe ingest --data data\sample --index .index\demo --embedder hash:512 --chunk-size 300 --overlap 50
+.\.venv\Scripts\ragforge.exe ask "What does error E-4012 mean?" --index .index\demo --strategy hybrid --llm extractive --reranker overlap -k 3
+.\.venv\Scripts\ragforge.exe eval --index .index\demo --eval eval\sample_eval.jsonl -k 3 --reranker overlap --show-misses
+```
+
+macOS/Linux (after activating `.venv`):
+
+```bash
+ragforge ingest --data data/sample --index .index/demo --embedder hash:512 --chunk-size 300 --overlap 50
+ragforge ask "What does error E-4012 mean?" --index .index/demo --strategy hybrid --llm extractive --reranker overlap -k 3
+ragforge eval --index .index/demo --eval eval/sample_eval.jsonl -k 3 --reranker overlap --show-misses
+```
+
+## Use your own documents
+
+Put PDF, Markdown, or text files in a folder such as `my_docs`, then ingest them. The `hash:512` embedder is only for an offline demo; for semantic search, install the larger local-model extra:
+
+```bash
+python -m pip install -e ".[local]"
 ragforge ingest --data ./my_docs --index .index/mine --embedder st:BAAI/bge-small-en-v1.5
 ragforge ask "your question" --index .index/mine --strategy hybrid --llm ollama:llama3.1
-ragforge eval --index .index/mine --eval eval/mine.jsonl -k 5 --show-misses --out docs/results.md
 ```
 
-Other ingest modes: `--mode semantic | parent-child | sentence-window`, `--headers`, `--captioner ollama:llava`
-(images and CSV tables), `--build-graph ollama:llama3.1` (GraphRAG). Strategies: `naive hybrid rerank rewrite multi
-hyde stepback decompose hierarchical metadata corrective agentic graph sql`. Model specs: embedders `st:` `ollama:`
-`openai:`; LLMs `ollama:` `openai:` `anthropic:`; keys from `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`.
+The embedding model downloads on first use. Ollama must be installed and running for `ollama:llama3.1`. OpenAI and Anthropic models are also supported; provide `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in the environment of the process running Ragforge. Never put real keys in source files or workspace configuration.
 
-## Service quick start
+## Run the local web service
+
+Windows PowerShell:
+
+```powershell
+$env:RAGFORGE_ADMIN_KEY = (.\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(32))")
+.\.venv\Scripts\python.exe -m uvicorn ragforge.platform.app:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+macOS/Linux:
 
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
-# Set the generated value as RAGFORGE_ADMIN_KEY in your shell, then:
-uvicorn ragforge.platform.app:create_app --factory --host 127.0.0.1 --port 8000
+export RAGFORGE_ADMIN_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+python -m uvicorn ragforge.platform.app:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
-Open `http://localhost:8000/dashboard` to sign in with the admin key, create a workspace, upload files, monitor indexing, and ask questions. The admin key is exchanged for a short-lived HTTP-only cookie and is not stored in browser JavaScript. A workspace API key is held in page memory only and stays hidden unless you explicitly reveal or copy it. Save it if you want to reconnect later.
+Keep the terminal open, then visit `http://localhost:8000/dashboard`. Sign in with the admin key from that terminal, create a workspace, upload PDF/Markdown/text documents, wait for indexing to finish, then ask questions. The admin key is exchanged for a short-lived HTTP-only cookie; a workspace API key stays in page memory and is hidden unless you explicitly reveal or copy it. The default workspace settings (`hash:512` and `extractive`) work without real models. Press **Ctrl+C** in the server terminal to stop it.
 
-The dashboard creates workspaces with the offline `hash:512` embedder and `extractive` answerer by default, so the complete flow works without model downloads or provider credentials. These are demo settings. For real model use, set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or an Ollama endpoint in the server environment and select matching model specs in workspace settings. Never put provider credentials in dashboard fields, source control, or workspace configuration. Changing an embedder makes its index stale until it is rebuilt; changing an answer model takes effect on the next query.
+For local Docker use, copy `.env.example` to `.env`, set a strong `RAGFORGE_ADMIN_KEY`, and run `docker compose up --build`. Docker is optional; the Python setup above is the simplest way to get started.
 
-### Deploy to Render
-
-The repository includes a Render Blueprint in `render.yaml` configured for a **Free demo deployment**. It defines a Docker web service, `/health` health check, and generated admin secret. It does not attach a persistent disk because Render Free does not support persistent disks.
-
-1. In Render, choose **New → Blueprint**, connect the GitHub repository, and apply the `render.yaml` configuration.
-2. Wait for the service deploy to complete. In the Render service's Environment page, retrieve the generated `RAGFORGE_ADMIN_KEY` for administrator sign-in. Set model-provider credentials there as secrets if needed; do not put them in the repository or browser.
-3. Open the Render service URL at `/dashboard`, create a workspace, use the reveal/copy controls to save its workspace key, upload documents, wait for the indexing job to finish, and ask questions. `/docs` provides the interactive API reference.
-
-**Free-tier limitation:** Free web services spin down after 15 minutes without traffic and can take about a minute to wake on the next request. Their filesystem is ephemeral; Ragforge's SQLite tenant database, uploaded files, and indexes can be lost whenever the service spins down, restarts, or redeploys. Use this setup as a disposable demo, not for important documents. To keep data across restarts, use a paid service with a persistent disk mounted at `/data` and change the Blueprint plan to a paid plan.
-
-Render's generated URL uses HTTPS. The dashboard's admin session cookie is HTTP-only, secure on HTTPS, same-site, and expires after 12 hours.
-
-For a local Docker run, copy `.env.example` to `.env`, generate a strong random `RAGFORGE_ADMIN_KEY`, and set it in `.env`, then run `docker compose up --build`. The Compose file maps the app to port 8000 and stores app data in a named volume.
+Other ingest modes include `--mode semantic | parent-child | sentence-window`, `--headers`, `--captioner ollama:llava` (images and CSV tables), and `--build-graph ollama:llama3.1` (GraphRAG). Strategies include `naive`, `hybrid`, `rerank`, `rewrite`, `multi`, `hyde`, `stepback`, `decompose`, `hierarchical`, `metadata`, `corrective`, `agentic`, `graph`, and `sql`.
 
 ## Verified vs not verified
 

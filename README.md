@@ -42,14 +42,15 @@ The dashboard creates workspaces with the offline `hash:512` embedder and `extra
 
 ### Deploy to Render
 
-The repository includes a Render Blueprint in `render.yaml`. It defines a Docker web service, `/health` health check, generated admin secret, and persistent `/data` disk for tenant databases, uploads, and indexes. Persistent disks require a paid Render service; review current pricing before deployment.
+The repository includes a Render Blueprint in `render.yaml` configured for a **Free demo deployment**. It defines a Docker web service, `/health` health check, and generated admin secret. It does not attach a persistent disk because Render Free does not support persistent disks.
 
-1. Create a Git repository and push this project. The included `.gitignore` excludes virtual environments, generated indexes, tenant data, and `.env` secrets. Review `git status` before pushing; commit `.env.example`, never your real `.env`.
-2. In Render, choose **New → Blueprint**, connect the repository, and apply the `render.yaml` configuration.
-3. Wait for the service deploy to complete. In the Render service's Environment page, retrieve the generated `RAGFORGE_ADMIN_KEY` for administrator sign-in. Set model-provider credentials there as secrets if needed; do not put them in the repository or browser.
-4. Open the Render service URL at `/dashboard`, create a workspace, save its one-time workspace key, upload documents, wait for the indexing job to finish, and ask questions. `/docs` provides the interactive API reference.
+1. In Render, choose **New → Blueprint**, connect the GitHub repository, and apply the `render.yaml` configuration.
+2. Wait for the service deploy to complete. In the Render service's Environment page, retrieve the generated `RAGFORGE_ADMIN_KEY` for administrator sign-in. Set model-provider credentials there as secrets if needed; do not put them in the repository or browser.
+3. Open the Render service URL at `/dashboard`, create a workspace, use the reveal/copy controls to save its workspace key, upload documents, wait for the indexing job to finish, and ask questions. `/docs` provides the interactive API reference.
 
-Render's generated URL uses HTTPS. The dashboard's admin session cookie is HTTP-only, secure on HTTPS, same-site, and expires after 12 hours. The Render disk is mounted at `/data`; do not remove it if you need to retain uploaded content and indexes.
+**Free-tier limitation:** Free web services spin down after 15 minutes without traffic and can take about a minute to wake on the next request. Their filesystem is ephemeral; Ragforge's SQLite tenant database, uploaded files, and indexes can be lost whenever the service spins down, restarts, or redeploys. Use this setup as a disposable demo, not for important documents. To keep data across restarts, use a paid service with a persistent disk mounted at `/data` and change the Blueprint plan to a paid plan.
+
+Render's generated URL uses HTTPS. The dashboard's admin session cookie is HTTP-only, secure on HTTPS, same-site, and expires after 12 hours.
 
 For a local Docker run, copy `.env.example` to `.env`, generate a strong random `RAGFORGE_ADMIN_KEY`, and set it in `.env`, then run `docker compose up --build`. The Compose file maps the app to port 8000 and stores app data in a named volume.
 

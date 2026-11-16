@@ -2,7 +2,7 @@ services:
   - type: web
     name: ragforge
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health
@@ -17,7 +17,3 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
-    disk:
-      name: ragforge-data
-      mountPath: /data
-      sizeGB: 1

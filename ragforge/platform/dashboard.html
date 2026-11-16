@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Ragforge | Document Q&amp;A</title>
+  <style>
+    :root{font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#17221e;background:#f4f6f3}
+    *{box-sizing:border-box}
+    body{margin:0}
+    header{background:#173f35;color:#fff;padding:32px max(20px,calc((100% - 980px)/2))}
+    header h1{margin:0;font-size:1.8rem}
+    header p{margin:6px 0 0;color:#d4e6de}
+    main{max-width:980px;margin:24px auto;padding:0 16px 48px}
+    section,.panel{background:#fff;border:1px solid #dfe7e1;border-radius:12px;padding:20px;margin:16px 0;box-shadow:0 2px 8px #173f3508}
+    h2{font-size:1.15rem;margin:0 0 12px}
+    h3{font-size:1rem;margin:16px 0 8px}
+    p{margin:8px 0}
+    label{display:block;font-weight:600;margin:10px 0 4px}
+    input,select,textarea,button{font:inherit;border:1px solid #b9c9bf;border-radius:7px;padding:9px 11px}
+    input,select,textarea{width:100%;background:#fff;color:inherit}
+    input[type=file]{padding:7px}
+    button{background:#17664f;color:#fff;border-color:#17664f;font-weight:650;cursor:pointer}
+    button:hover{background:#10533f}
+    button.secondary{background:#fff;color:#245747}
+    button.danger{background:#fff;color:#a52c2c;border-color:#e4baba}
+    button:disabled{opacity:.55;cursor:wait}
+    .row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+    .row>*{flex:1;min-width:180px}
+    .row button{flex:0 0 auto}
+    .muted,.hint{color:#5d6e64;font-size:.92rem}
+    .status{padding:10px 12px;border-radius:7px;background:#eef5f0;color:#245747;white-space:pre-wrap}
+    .error{background:#fff0ee;color:#8f2922}
+    .hidden{display:none!important}
+    .key-row{display:flex;gap:8px;align-items:center}
+    .key-row input{font-family:ui-monospace,monospace}
+    .key-row button{white-space:nowrap}
+    .doc{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #edf1ed}
+    .doc:last-child{border-bottom:0}
+    .doc button{padding:5px 9px}
+    .source{border-left:3px solid #278263;padding:8px 12px;margin:10px 0;background:#f7faf8}
+    .source small{color:#596a60}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere}
+    @media(max-width:600px){header{padding:24px 18px}.row{display:block}.row>*{margin:5px 0}.key-row{align-items:stretch;flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ragforge</h1>
+    <p>Upload your documents, build a searchable index, and ask questions with cited sources.</p>
+  </header>
+  <main>
+    <section>
+      <h2>1. Admin sign-in</h2>
+      <p class="hint">Enter the admin key configured on the server. It is exchanged for a short-lived, HTTP-only session and is not saved in this page.</p>
+      <div class="row">
+        <input id="adminKey" type="password" autocomplete="current-password" placeholder="Server admin key" aria-label="Server admin key">
+        <button id="adminLogin">Sign in</button>
+        <button id="adminLogout" class="secondary hidden">Sign out</button>
+      </div>
+      <p id="adminStatus" class="status" role="status">Not signed in</p>
+    </section>
+
+    <section id="createTenantSection" class="hidden">
+      <h2>2. Create a workspace</h2>
+      <p class="hint">Demo mode works without model downloads or provider credentials. For real models, enter model names here and configure provider API keys as secrets in Render, never in this page.</p>
+      <label for="tenantName">Workspace name</label>
+      <input id="tenantName" maxlength="100" value="My documents" placeholder="e.g. Support handbook">
+      <div class="row">
+        <div><label for="newEmbedder">Embedding model</label><input id="newEmbedder" value="hash:512"></div>
+        <div><label for="newLlm">Answer model</label><input id="newLlm" value="extractive"></div>
+      </div>
+      <button id="createTenant">Create workspace</button>
+      <div id="newKeyBox" class="hidden">
+        <p><strong>Save this workspace key.</strong> It is kept in page memory and is not shown unless you choose to reveal it. If you lose it, create a new workspace.</p>
+        <div class="key-row">
+          <input id="newClientKey" type="password" readonly aria-label="New workspace API key">
+          <button id="toggleNewKey" class="secondary" type="button">Reveal key</button>
+          <button id="copyNewKey" class="secondary" type="button">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. Open a workspace</h2>
+      <p class="hint">Paste a saved workspace key, or create one above. Keys are held only in this page's memory and are cleared when you disconnect or close the page.</p>
+      <div class="row">
+        <input id="clientKey" type="password" autocomplete="off" placeholder="Workspace API key" aria-label="Workspace API key">
+        <button id="connectTenant">Connect</button>
+        <button id="disconnectTenant" class="secondary hidden">Disconnect</button>
+      </div>
+      <p id="tenantStatus" class="status" role="status">No workspace connected</p>
+    </section>
+
+    <div id="workspace" class="hidden">
+      <section>
+        <h2>Workspace status</h2>
+        <pre id="status" class="status">Loading...</pre>
+        <p id="usage" class="muted"></p>
+      </section>
+
+      <section>
+        <h2>Workspace settings</h2>
+        <p class="hint">Provider credentials are never entered here. Set them in Render's environment variables before selecting a provider model.</p>
+        <div class="row">
+          <div><label for="embedder">Embedder</label><input id="embedder" placeholder="hash:512, st:model, openai:model"></div>
+          <div><label for="llm">Answer model</label><input id="llm" placeholder="extractive, ollama:model, openai:model"></div>
+        </div>
+        <div class="row">
+          <div><label for="reranker">Reranker</label><select id="reranker"><option value="overlap">overlap (lightweight)</option><option value="ce">cross-encoder (model required)</option></select></div>
+          <div><label for="defaultStrategy">Default retrieval strategy</label><select id="defaultStrategy"></select></div>
+          <div><label for="resultCount">Results per answer</label><input id="resultCount" type="number" min="1" max="20" value="5"></div>
+        </div>
+        <div class="row">
+          <div><label for="chunkSize">Chunk size</label><input id="chunkSize" type="number" min="100" max="4000" value="800"></div>
+          <div><label for="overlap">Chunk overlap</label><input id="overlap" type="number" min="0" max="1000" value="120"></div>
+        </div>
+        <button id="saveSettings">Save settings</button>
+        <button id="reindex" class="secondary">Rebuild index</button>
+        <p id="settingsStatus" class="muted" role="status"></p>
+      </section>
+
+      <section>
+        <h2>Documents</h2>
+        <p class="hint">Upload PDF, Markdown, or text files (up to 10 MB each). Uploading or deleting files rebuilds the workspace index.</p>
+        <label for="files">Choose files</label>
+        <input id="files" type="file" multiple accept=".pdf,.md,.txt">
+        <button id="upload">Upload and index</button>
+        <p id="jobStatus" class="status" role="status">No indexing job running</p>
+        <div class="row"><h3>Uploaded files</h3><button id="refreshFiles" class="secondary">Refresh list</button></div>
+        <div id="documents" class="muted">No files loaded</div>
+      </section>
+
+      <section>
+        <h2>Ask your documents</h2>
+        <label for="question">Question</label>
+        <textarea id="question" rows="3" maxlength="2000" placeholder="Ask a question answered by your documents"></textarea>
+        <label for="strategy">Retrieval strategy</label>
+        <div class="row">
+          <select id="strategy"></select>
+          <button id="ask">Ask</button>
+        </div>
+        <div id="answer" aria-live="polite"></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    let tenantKey = "";
+    let strategies = [];
+
+    async function request(path, options = {}, tenantAuth = false) {
+      const headers = {...(options.headers || {})};
+      if (tenantAuth) headers.Authorization = "Bearer " + tenantKey;
+      const response = await fetch(path, {...options, headers, credentials: "same-origin"});
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.detail || `Request failed (${response.status})`);
+      return body;
+    }
+
+    function showStatus(id, message, isError = false) {
+      $(id).textContent = message;
+      $(id).classList.toggle("error", isError);
+    }
+
+    function setAdminSignedIn(signedIn) {
+      $("createTenantSection").classList.toggle("hidden", !signedIn);
+      $("adminLogin").classList.toggle("hidden", signedIn);
+      $("adminLogout").classList.toggle("hidden", !signedIn);
+      if (signedIn) showStatus("adminStatus", "Signed in. The admin key is not stored in the browser.");
+    }
+
+    async function signIn() {
+      const key = $("adminKey").value;
+      $("adminKey").value = "";
+      try {
+        await request("/admin/session", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({key})
+        });
+        setAdminSignedIn(true);
+      } catch (error) {
+        setAdminSignedIn(false);
+        showStatus("adminStatus", error.message, true);
+      }
+    }
+
+    async function createTenant() {
+      $("createTenant").disabled = true;
+      try {
+        const result = await request("/admin/tenants", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            name: $("tenantName").value.trim(),
+            config: {
+              embedder: $("newEmbedder").value.trim(),
+              llm: $("newLlm").value.trim(),
+              reranker: "overlap",
+              default_strategy: "hybrid",
+              chunk_size: 800,
+              overlap: 120,
+              k: 5
+            }
+          })
+        });
+        $("newClientKey").value = "";
+        $("newClientKey").type = "password";
+        $("newKeyBox").classList.remove("hidden");
+        await connectTenant(result.api_key);
+        showStatus("tenantStatus", "Workspace created and connected. Save or copy its key before leaving this page.");
+      } catch (error) {
+        showStatus("tenantStatus", error.message, true);
+      } finally {
+        $("createTenant").disabled = false;
+      }
+    }
+
+    async function connectTenant(key = $("clientKey").value.trim()) {
+      tenantKey = key;
+      $("clientKey").value = "";
+      if (!tenantKey) {
+        showStatus("tenantStatus", "Enter a workspace key.", true);
+        return;
+      }
+      try {
+        await loadWorkspace();
+        $("workspace").classList.remove("hidden");
+        $("disconnectTenant").classList.remove("hidden");
+        showStatus("tenantStatus", "Workspace connected.");
+      } catch (error) {
+        tenantKey = "";
+        $("workspace").classList.add("hidden");
+        showStatus("tenantStatus", error.message, true);
+      }
+    }
+
+    async function disconnectTenant() {
+      tenantKey = "";
+      $("clientKey").value = "";
+      $("newClientKey").value = "";
+      $("newClientKey").type = "password";
+      $("toggleNewKey").textContent = "Show";
+      $("workspace").classList.add("hidden");
+      $("disconnectTenant").classList.add("hidden");
+      $("newKeyBox").classList.add("hidden");
+      showStatus("tenantStatus", "Workspace disconnected. Its key was cleared from this page.");
+    }
+
+    async function loadWorkspace() {
+      const [result, usage, available] = await Promise.all([
+        request("/v1/config", {}, true),
+        request("/v1/usage", {}, true),
+        request("/v1/strategies", {}, true)
+      ]);
+      const config = result.config;
+      $("embedder").value = config.embedder;
+      $("llm").value = config.llm;
+      $("reranker").value = config.reranker;
+      $("defaultStrategy").replaceChildren();
+      $("strategy").replaceChildren();
+      strategies = available.strategies;
+      for (const item of strategies) {
+        for (const select of [$("defaultStrategy"), $("strategy")]) {
+          const option = document.createElement("option");
+          option.value = item.name;
+          option.textContent = item.name + (item.needs_llm ? " (uses an LLM)" : "");
+          select.appendChild(option);
+        }
+      }
+      $("defaultStrategy").value = config.default_strategy;
+      $("strategy").value = config.default_strategy;
+      $("resultCount").value = config.k;
+      $("chunkSize").value = config.chunk_size;
+      $("overlap").value = config.overlap;
+      $("status").textContent = JSON.stringify({
+        index: {
+          indexed: result.indexed,
+          chunks: result.chunks || 0,
+          embedder: result.embedder || null,
+          reindex_required: result.reindex_required
+        },
+        models: {embedder: config.embedder, answer: config.llm}
+      }, null, 2);
+      $("usage").textContent = `${usage.queries_total} total questions; ${usage.queries_last_24h} in the last 24 hours.`;
+      await loadDocuments();
+    }
+
+    async function loadDocuments() {
+      const result = await request("/v1/documents", {}, true);
+      const list = $("documents");
+      list.replaceChildren();
+      if (!result.documents.length) {
+        list.textContent = "No documents uploaded yet.";
+        return;
+      }
+      for (const name of result.documents) {
+        const row = document.createElement("div");
+        row.className = "doc";
+        const label = document.createElement("span");
+        label.textContent = name;
+        const remove = document.createElement("button");
+        remove.className = "danger";
+        remove.textContent = "Delete";
+        remove.addEventListener("click", () => deleteDocument(name));
+        row.append(label, remove);
+        list.appendChild(row);
+      }
+    }
+
+    async function pollJob(id) {
+      for (let attempt = 0; attempt < 180; attempt++) {
+        const job = await request(`/v1/jobs/${encodeURIComponent(id)}`, {}, true);
+        showStatus("jobStatus", `${job.status}: ${job.detail || "Indexing documents..."}`, job.status === "failed");
+        if (job.status === "done" || job.status === "failed") {
+          await loadWorkspace();
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      showStatus("jobStatus", "This job is taking longer than expected. Refresh the page status or check again shortly.", true);
+    }
+
+    async function uploadFiles() {
+      const files = $("files").files;
+      if (!files.length) {
+        showStatus("jobStatus", "Choose at least one file first.", true);
+        return;
+      }
+      const form = new FormData();
+      for (const file of files) form.append("files", file);
+      $("upload").disabled = true;
+      try {
+        const result = await request("/v1/documents", {method: "POST", body: form}, true);
+        showStatus("jobStatus", `Uploaded ${result.files.join(", ")}. Indexing...`);
+        await pollJob(result.job_id);
+      } catch (error) {
+        showStatus("jobStatus", error.message, true);
+      } finally {
+        $("upload").disabled = false;
+      }
+    }
+
+    async function deleteDocument(name) {
+      if (!window.confirm(`Delete ${name} and rebuild the index?`)) return;
+      try {
+        const result = await request(`/v1/documents/${encodeURIComponent(name)}`, {method: "DELETE"}, true);
+        showStatus("jobStatus", "File deleted. Rebuilding index...");
+        await pollJob(result.job_id);
+      } catch (error) {
+        showStatus("jobStatus", error.message, true);
+      }
+    }
+
+    async function saveSettings() {
+      const config = {
+        embedder: $("embedder").value.trim(),
+        llm: $("llm").value.trim(),
+        reranker: $("reranker").value,
+        default_strategy: $("defaultStrategy").value,
+        k: Number($("resultCount").value),
+        chunk_size: Number($("chunkSize").value),
+        overlap: Number($("overlap").value)
+      };
+      try {
+        const result = await request("/v1/config", {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(config)
+        }, true);
+        showStatus("settingsStatus", result.reindex_required
+          ? "Saved. The embedder changed; rebuild the index before asking questions."
+          : "Settings saved.");
+        await loadWorkspace();
+      } catch (error) {
+        showStatus("settingsStatus", error.message, true);
+      }
+    }
+
+    async function reindex() {
+      try {
+        const result = await request("/v1/reindex", {method: "POST"}, true);
+        showStatus("jobStatus", "Rebuilding index...");
+        await pollJob(result.job_id);
+      } catch (error) {
+        showStatus("jobStatus", error.message, true);
+      }
+    }
+
+    async function ask() {
+      const question = $("question").value.trim();
+      if (!question) {
+        $("answer").textContent = "Enter a question first.";
+        return;
+      }
+      $("ask").disabled = true;
+      $("answer").textContent = "Searching documents...";
+      try {
+        const result = await request("/v1/query", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({question, strategy: $("strategy").value, k: Number($("resultCount").value)})
+        }, true);
+        const answer = document.createElement("p");
+        answer.textContent = result.answer;
+        const details = document.createElement("p");
+        details.className = "muted";
+        details.textContent = `Strategy: ${result.strategy} | Retrieval: ${result.timings_ms.retrieve ?? 0} ms | Generation: ${result.timings_ms.generate ?? 0} ms`;
+        const box = $("answer");
+        box.replaceChildren(answer, details);
+        for (const [index, source] of result.sources.entries()) {
+          const item = document.createElement("div");
+          item.className = "source";
+          const text = document.createElement("div");
+          text.textContent = `[${index + 1}] ${source.text}`;
+          const meta = document.createElement("small");
+          meta.textContent = `${source.document} | score ${source.score}`;
+          item.append(text, meta);
+          box.appendChild(item);
+        }
+      } catch (error) {
+        $("answer").textContent = `Error: ${error.message}`;
+      } finally {
+        $("ask").disabled = false;
+      }
+    }
+
+    $("adminLogin").addEventListener("click", signIn);
+    $("adminKey").addEventListener("keydown", event => { if (event.key === "Enter") signIn(); });
+    $("adminLogout").addEventListener("click", async () => {
+      try {
+        await request("/admin/session", {method: "DELETE"});
+      } catch (error) {
+        showStatus("adminStatus", `Could not end the admin session: ${error.message}`, true);
+        return;
+      }
+      setAdminSignedIn(false);
+      showStatus("adminStatus", "Signed out.");
+      await disconnectTenant();
+    });
+    $("createTenant").addEventListener("click", createTenant);
+    $("connectTenant").addEventListener("click", connectTenant);
+    $("clientKey").addEventListener("keydown", event => { if (event.key === "Enter") connectTenant(); });
+    $("disconnectTenant").addEventListener("click", disconnectTenant);
+    $("toggleNewKey").addEventListener("click", () => {
+      const field = $("newClientKey");
+      if (field.type === "password") {
+        field.value = tenantKey;
+        field.type = "text";
+        $("toggleNewKey").textContent = "Hide key";
+      } else {
+        field.value = "";
+        field.type = "password";
+        $("toggleNewKey").textContent = "Reveal key";
+      }
+    });
+    $("copyNewKey").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(tenantKey);
+        $("copyNewKey").textContent = "Copied";
+      } catch (_) {
+        showStatus("tenantStatus", "Clipboard access failed. Reveal the key and copy it manually.", true);
+      }
+    });
+    $("saveSettings").addEventListener("click", saveSettings);
+    $("reindex").addEventListener("click", reindex);
+    $("upload").addEventListener("click", uploadFiles);
+    $("refreshFiles").addEventListener("click", () => loadDocuments().catch(error => showStatus("jobStatus", error.message, true)));
+    $("ask").addEventListener("click", ask);
+    $("question").addEventListener("keydown", event => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) ask();
+    });
+
+    request("/admin/session")
+      .then(result => setAdminSignedIn(result.authenticated))
+      .catch(error => showStatus("adminStatus", error.message, true));
+  </script>
+</body>
+</html>

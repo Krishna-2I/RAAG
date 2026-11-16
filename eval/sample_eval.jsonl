@@ -1,0 +1,15 @@
+{"question": "Why must the same embedding model be used for indexing and querying?", "evidence": ["different spaces"]}
+{"question": "How many dimensions does the bge-small model produce?", "evidence": ["384-dimensional"]}
+{"question": "What chunk size and overlap are a common starting point?", "evidence": ["800 characters with an overlap of 120 characters"]}
+{"question": "What does chunk overlap do?", "evidence": ["repeats the end of one chunk"]}
+{"question": "What does efSearch control in HNSW?", "evidence": ["how many candidates are explored at query time"]}
+{"question": "When is exact vector search good enough?", "evidence": ["fine for a few thousand chunks"]}
+{"question": "What values of k1 and b does BM25 normally use?", "evidence": ["k1 of 1.5", "b of 0.75"]}
+{"question": "What does error E-4012 mean?", "evidence": ["error e-4012 means the index schema"]}
+{"question": "How does reciprocal rank fusion score a chunk?", "evidence": ["1 divided by (60 + rank)"]}
+{"question": "Why is a cross-encoder more accurate than a bi-encoder?", "evidence": ["reads the query and one chunk together"]}
+{"question": "How many candidates should be retrieved before reranking?", "evidence": ["retrieve about 30 candidates"]}
+{"question": "What is mean reciprocal rank?", "evidence": ["average of 1 divided by the rank of the first relevant result"]}
+{"question": "How do I fix error E-5003?", "evidence": ["reduce the batch size"]}
+{"question": "Why does BM25 struggle when the question says automobiles and the text says cars?", "evidence": ["different words than the document"]}
+{"question": "What does faithfulness measure?", "evidence": ["supported by the retrieved context"]}

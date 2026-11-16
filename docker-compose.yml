@@ -1,0 +1,21 @@
+services:
+  api:
+    build:
+      context: .
+      args:
+        EXTRAS: "server,local"   # "local" adds sentence-transformers (large image). Use "server" if you only use Ollama/API models.
+    ports: ["8000:8000"]
+    environment:
+      RAGFORGE_ADMIN_KEY: ${RAGFORGE_ADMIN_KEY:?set RAGFORGE_ADMIN_KEY in .env}
+      PORT: 8000
+      OLLAMA_HOST: http://ollama:11434
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes: ["ragdata:/data"]
+  ollama:                        # start with: docker compose --profile local up
+    image: ollama/ollama
+    profiles: ["local"]
+    volumes: ["ollama:/root/.ollama"]
+volumes:
+  ragdata:
+  ollama:

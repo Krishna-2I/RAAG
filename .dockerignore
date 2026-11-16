@@ -1,0 +1,12 @@
+.venv
+.git
+.env
+.env.*
+!.env.example
+.index
+.idx
+data/tenants
+data/*.db
+__pycache__
+.pytest_cache
+*.egg-info

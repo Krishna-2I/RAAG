@@ -7,6 +7,8 @@ A tested Python project with two layers:
 
 The project can be downloaded from Git and run locally. It includes a command-line RAG workflow and an optional local web service/dashboard.
 
+For a complete learning roadmap, architecture walkthrough, code-reading order, and hands-on exercises, see the [Project Learning Guide](docs/PROJECT_GUIDE.md).
+
 ## Download and install
 
 Requires Python 3.10 or newer and Git. Clone the repository:
